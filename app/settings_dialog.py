@@ -18,6 +18,7 @@ from tkinter import ttk
 import ollama
 
 from .config import ICON_PATH, Settings
+from .tasks  import LANGUAGES
 
 
 def _centre_window(win: tk.BaseWidget, w: int, h: int) -> None:
@@ -74,16 +75,35 @@ def show_settings_dialog(root: tk.Tk, cfg: Settings) -> None:
     ttk.Button(dlg, text="↺  Refresh list", command=_refresh).grid(
         row=2, column=1, sticky="e", padx=14, pady=(0, 4))
 
-    # ── Thinking mode ─────────────────────────────────────────────────────────
+    # ── Translation language pair ─────────────────────────────────────────────
     ttk.Separator(dlg, orient="horizontal").grid(
         row=3, column=0, columnspan=2, sticky="ew", padx=14, pady=4)
+
+    ttk.Label(dlg, text="Translation", font=("Segoe UI", 10, "bold")).grid(
+        row=4, column=0, sticky="w", padx=14, pady=(4, 2))
+
+    ttk.Label(dlg, text="From").grid(row=5, column=0, sticky="w", padx=14, pady=4)
+    from_var = tk.StringVar(value=cfg.translate_from)
+    from_cb  = ttk.Combobox(dlg, textvariable=from_var, width=26,
+                             values=["Auto-detect"] + LANGUAGES, state="readonly")
+    from_cb.grid(row=5, column=1, sticky="ew", padx=14, pady=4)
+
+    ttk.Label(dlg, text="To").grid(row=6, column=0, sticky="w", padx=14, pady=4)
+    to_var = tk.StringVar(value=cfg.translate_to)
+    to_cb  = ttk.Combobox(dlg, textvariable=to_var, width=26,
+                           values=LANGUAGES, state="readonly")
+    to_cb.grid(row=6, column=1, sticky="ew", padx=14, pady=4)
+
+    # ── Thinking mode ─────────────────────────────────────────────────────────
+    ttk.Separator(dlg, orient="horizontal").grid(
+        row=7, column=0, columnspan=2, sticky="ew", padx=14, pady=4)
 
     thinking_var = tk.BooleanVar(value=cfg.thinking)
     ttk.Checkbutton(
         dlg,
         text="Enable thinking mode  (qwen3 / deepseek-r1 only)",
         variable=thinking_var,
-    ).grid(row=4, column=0, columnspan=2, sticky="w", padx=14, pady=6)
+    ).grid(row=8, column=0, columnspan=2, sticky="w", padx=14, pady=6)
 
     ttk.Label(
         dlg,
@@ -92,18 +112,20 @@ def show_settings_dialog(root: tk.Tk, cfg: Settings) -> None:
             "Slower but more thorough. The reasoning chain is shown in results."
         ),
         foreground="#666", font=("Segoe UI", 9), justify=tk.LEFT,
-    ).grid(row=5, column=0, columnspan=2, sticky="w", padx=28, pady=(0, 8))
+    ).grid(row=9, column=0, columnspan=2, sticky="w", padx=28, pady=(0, 8))
 
     # ── Save / Cancel ─────────────────────────────────────────────────────────
     ttk.Separator(dlg, orient="horizontal").grid(
-        row=6, column=0, columnspan=2, sticky="ew", padx=14, pady=4)
+        row=10, column=0, columnspan=2, sticky="ew", padx=14, pady=4)
 
     btn_row = ttk.Frame(dlg)
-    btn_row.grid(row=7, column=0, columnspan=2, sticky="e", padx=14, pady=8)
+    btn_row.grid(row=11, column=0, columnspan=2, sticky="e", padx=14, pady=8)
 
     def _save() -> None:
-        cfg.model    = model_var.get()
-        cfg.thinking = thinking_var.get()
+        cfg.model          = model_var.get()
+        cfg.thinking       = thinking_var.get()
+        cfg.translate_from = from_var.get()
+        cfg.translate_to   = to_var.get()
         dlg.destroy()
 
     ttk.Button(btn_row, text="Save",   width=10, command=_save).pack(

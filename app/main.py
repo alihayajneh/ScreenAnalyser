@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import threading
 import tkinter as tk
+from dataclasses import replace as _dc_replace
 from typing import Optional, Tuple
 
 import keyboard
@@ -30,7 +31,7 @@ from .result_window    import AnalysisWindow, show_error_popup
 from .selector         import RegionSelector
 from .settings_dialog  import show_settings_dialog
 from .state            import processing_lock, ui_queue
-from .tasks            import BUILTIN_TASKS, Task, get as get_task
+from .tasks            import BUILTIN_TASKS, RTL_LANGUAGES, Task, get as get_task, make_translate_prompt
 from .toast            import show_toast
 from .tray             import SystemTray
 
@@ -197,6 +198,27 @@ class App:
         else:
             self._analysis_win.show_results(task.name, content, img)
 
+    # ── Task preparation ──────────────────────────────────────────────────────
+
+    def _prepare_task(self, task: Task) -> Task:
+        """
+        Apply runtime settings to a task before dispatching it.
+
+        For the 'translate' task the prompt and RTL flag are generated fresh
+        from the current language-pair settings so the user never has to edit
+        prompts manually.
+        """
+        if task.id == "translate":
+            from_lang = cfg.translate_from
+            to_lang   = cfg.translate_to
+            return _dc_replace(
+                task,
+                name   = f"Translate → {to_lang}",
+                prompt = make_translate_prompt(from_lang, to_lang),
+                rtl    = (to_lang in RTL_LANGUAGES),
+            )
+        return task
+
     # ── History ───────────────────────────────────────────────────────────────
 
     def _on_show_history(self, entry_id: int) -> None:
@@ -228,7 +250,7 @@ class App:
         processing_lock.set()
 
         if mode == "fullscreen":
-            task = get_task(_FULLSCREEN_TASK_ID)
+            task = self._prepare_task(get_task(_FULLSCREEN_TASK_ID))
             run_analysis_fullscreen(
                 task     = task,
                 model    = cfg.model,
@@ -237,7 +259,7 @@ class App:
                 lock     = processing_lock,
             )
         elif mode == "clipboard":
-            task = get_task(_CLIPBOARD_TASK_ID)
+            task = self._prepare_task(get_task(_CLIPBOARD_TASK_ID))
             run_analysis_clipboard(
                 task     = task,
                 model    = cfg.model,
@@ -252,7 +274,7 @@ class App:
         if processing_lock.is_set():
             return
         processing_lock.set()
-        task = get_task(task_id)
+        task = self._prepare_task(get_task(task_id))
         self._selector.run(lambda bbox: self._on_region_selected(bbox, task))
 
     def _on_region_selected(self, bbox: Optional[BBox], task: Task) -> None:

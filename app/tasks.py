@@ -65,6 +65,36 @@ _TRANSLATE_PROMPT = (
     "If the text is already in English, output it unchanged."
 )
 
+# ── Translation language support ──────────────────────────────────────────────
+
+#: Full list shown in the Settings "Translate To" dropdown (alphabetical).
+LANGUAGES: list[str] = [
+    "Arabic", "Bengali", "Chinese (Simplified)", "Chinese (Traditional)",
+    "Dutch", "English", "French", "German", "Greek",
+    "Hebrew", "Hindi", "Indonesian", "Italian",
+    "Japanese", "Korean", "Malay", "Persian",
+    "Polish", "Portuguese", "Russian", "Spanish",
+    "Swedish", "Thai", "Turkish", "Ukrainian", "Urdu",
+    "Vietnamese",
+]
+
+#: Languages whose scripts run right-to-left.
+RTL_LANGUAGES: set[str] = {"Arabic", "Hebrew", "Persian", "Urdu", "Pashto"}
+
+
+def make_translate_prompt(from_lang: str, to_lang: str) -> str:
+    """Build a translation prompt for the given language pair."""
+    if from_lang == "Auto-detect":
+        source = "all visible text in this image"
+    else:
+        source = f"all {from_lang} text visible in this image"
+    return (
+        f"Translate {source} to {to_lang}. "
+        "Preserve the original structure, line breaks, and paragraph layout. "
+        "Output ONLY the translated text — no explanations, no labels, no commentary. "
+        f"If the text is already in {to_lang}, output it unchanged."
+    )
+
 _EXPLAIN_PROMPT = (
     "You are a helpful assistant. Give a clear, detailed explanation of this screenshot. "
     "Use EXACTLY these three markdown sections:\n\n"
@@ -99,13 +129,6 @@ _SUMMARISE_PROMPT = (
     "Any important numbers, dates, names, or statistics worth remembering. "
     "Write N/A if none are visible.\n\n"
     "Use **bold** for key terms. Be concise."
-)
-
-_TRANSLATE_AR_PROMPT = (
-    "ترجم جميع النصوص المرئية في هذه الصورة إلى اللغة العربية الفصحى. "
-    "احتفظ بالبنية الأصلية وفقرات النص وفواصل الأسطر. "
-    "أخرج النص المترجم فقط — بدون شرح أو تعليق. "
-    "إذا كان النص مكتوباً بالعربية بالفعل، أعد كتابته كما هو."
 )
 
 
@@ -150,9 +173,9 @@ BUILTIN_TASKS: dict[str, Task] = {
     ),
     "translate": Task(
         id          = "translate",
-        name        = "Translate to English",
-        prompt      = _TRANSLATE_PROMPT,
-        description = "Translate all visible text to English.",
+        name        = "Translate",
+        prompt      = _TRANSLATE_PROMPT,   # overridden at runtime from Settings
+        description = "Translate visible text between any two languages (set in Settings).",
         hotkey      = "ctrl+alt+x",
         raw_output  = True,
     ),
@@ -176,15 +199,6 @@ BUILTIN_TASKS: dict[str, Task] = {
         prompt      = _SUMMARISE_PROMPT,
         description = "Extract the topic, key points, and notable data from visible content.",
         hotkey      = "ctrl+alt+u",
-    ),
-    "translate_ar": Task(
-        id          = "translate_ar",
-        name        = "Translate to Arabic",
-        prompt      = _TRANSLATE_AR_PROMPT,
-        description = "Translate all visible text to Arabic (Modern Standard Arabic).",
-        hotkey      = "ctrl+alt+a",
-        raw_output  = True,
-        rtl         = True,
     ),
 }
 

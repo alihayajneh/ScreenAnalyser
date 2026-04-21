@@ -49,7 +49,12 @@ TRAY_TOOLTIP = "Screen Analyser"
 #  Persistent settings
 # ─────────────────────────────────────────────────────────────────────────────
 
-_DEFAULTS: dict = {"model": "qwen3-vl:4b", "thinking": False}
+_DEFAULTS: dict = {
+    "model":          "qwen3-vl:4b",
+    "thinking":       False,
+    "translate_from": "Auto-detect",
+    "translate_to":   "English",
+}
 
 
 class Settings:
@@ -108,6 +113,30 @@ class Settings:
     def thinking(self, value: bool) -> None:
         with self._lock:
             self._d["thinking"] = bool(value)
+            self._save()
+
+    # ── translation language pair ─────────────────────────────────────────────
+
+    @property
+    def translate_from(self) -> str:
+        with self._lock:
+            return str(self._d.get("translate_from", _DEFAULTS["translate_from"]))
+
+    @translate_from.setter
+    def translate_from(self, value: str) -> None:
+        with self._lock:
+            self._d["translate_from"] = value
+            self._save()
+
+    @property
+    def translate_to(self) -> str:
+        with self._lock:
+            return str(self._d.get("translate_to", _DEFAULTS["translate_to"]))
+
+    @translate_to.setter
+    def translate_to(self, value: str) -> None:
+        with self._lock:
+            self._d["translate_to"] = value
             self._save()
 
 
