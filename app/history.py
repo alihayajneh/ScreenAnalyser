@@ -27,6 +27,7 @@ class HistoryEntry:
     timestamp:   str           # "HH:MM"
     task_name:   str
     raw_output:  bool          # True → show in raw layout; False → section cards
+    rtl:         bool          # True → right-to-left display (Arabic, Hebrew …)
     content:     str
     screenshot:  Optional[Image.Image]
 
@@ -44,6 +45,7 @@ class History:
         self,
         task_name:  str,
         raw_output: bool,
+        rtl:        bool,
         content:    str,
         screenshot: Optional[Image.Image],
     ) -> HistoryEntry:
@@ -54,6 +56,7 @@ class History:
                 timestamp  = datetime.now().strftime("%H:%M"),
                 task_name  = task_name,
                 raw_output = raw_output,
+                rtl        = rtl,
                 content    = content,
                 screenshot = screenshot,
             )

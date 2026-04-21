@@ -254,16 +254,35 @@ def _build_results_layout(
 #  Raw-text layout  (OCR, translation)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _apply_rtl(text: str) -> str:
+    """
+    Reshape Arabic/Hebrew glyphs and apply the Unicode BiDi algorithm so the
+    text displays correctly inside a left-to-right tkinter Text widget.
+    Falls back to the original string if the libraries are not installed.
+    """
+    try:
+        import arabic_reshaper                      # type: ignore
+        from bidi.algorithm import get_display      # type: ignore
+        reshaped = arabic_reshaper.reshape(text)
+        return get_display(reshaped)
+    except Exception:
+        return text
+
+
 def _build_raw_layout(
     win:        tk.Toplevel,
     text:       str,
     screenshot: Optional[Image.Image],
+    rtl:        bool = False,
 ) -> None:
     """
     Plain-text result layout: monospace scrollable text on the left,
     optional screenshot thumbnail on the right.
     Used for OCR and translation tasks.
     """
+    if rtl:
+        text = _apply_rtl(text)
+
     chrome = ttk.Frame(win, padding=(8, 8, 8, 6))
     chrome.pack(fill=tk.BOTH, expand=True)
     chrome.rowconfigure(0, weight=1)
@@ -289,8 +308,9 @@ def _build_raw_layout(
         bg="#1e1e2e", fg="#cdd6f4",
         insertbackground="#cdd6f4",
         selectbackground="#313244",
-        font=("Consolas", 11),
+        font=("Segoe UI", 12) if rtl else ("Consolas", 11),
         cursor="arrow",
+        justify=tk.RIGHT if rtl else tk.LEFT,
     )
     sb = ttk.Scrollbar(txt_frame, orient=tk.VERTICAL, command=txt.yview)
     txt.configure(yscrollcommand=sb.set)
@@ -475,6 +495,7 @@ class AnalysisWindow:
         title:      str,
         text:       str,
         screenshot: Optional[Image.Image],
+        rtl:        bool = False,
     ) -> None:
         """
         Tear down spinner and build a plain-text layout in-place.
@@ -482,7 +503,7 @@ class AnalysisWindow:
         than parsed section cards.
         """
         self._replace_content(
-            title, lambda w: _build_raw_layout(w, text, screenshot),
+            title, lambda w: _build_raw_layout(w, text, screenshot, rtl=rtl),
             width=(680 + _THUMB_W + 24) if screenshot else 680, height=480,
         )
 

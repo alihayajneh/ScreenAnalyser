@@ -101,6 +101,13 @@ _SUMMARISE_PROMPT = (
     "Use **bold** for key terms. Be concise."
 )
 
+_TRANSLATE_AR_PROMPT = (
+    "ترجم جميع النصوص المرئية في هذه الصورة إلى اللغة العربية الفصحى. "
+    "احتفظ بالبنية الأصلية وفقرات النص وفواصل الأسطر. "
+    "أخرج النص المترجم فقط — بدون شرح أو تعليق. "
+    "إذا كان النص مكتوباً بالعربية بالفعل، أعد كتابته كما هو."
+)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Task dataclass
@@ -115,6 +122,7 @@ class Task:
     hotkey:      Optional[str] = None   # e.g. "ctrl+alt+s" — None = tray only
     auto_copy:   bool = False   # copy result to clipboard automatically
     raw_output:  bool = False   # display plain text instead of section cards
+    rtl:         bool = False   # right-to-left output (Arabic, Hebrew, …)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -168,6 +176,15 @@ BUILTIN_TASKS: dict[str, Task] = {
         prompt      = _SUMMARISE_PROMPT,
         description = "Extract the topic, key points, and notable data from visible content.",
         hotkey      = "ctrl+alt+u",
+    ),
+    "translate_ar": Task(
+        id          = "translate_ar",
+        name        = "Translate to Arabic",
+        prompt      = _TRANSLATE_AR_PROMPT,
+        description = "Translate all visible text to Arabic (Modern Standard Arabic).",
+        hotkey      = "ctrl+alt+a",
+        raw_output  = True,
+        rtl         = True,
     ),
 }
 

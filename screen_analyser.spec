@@ -24,6 +24,10 @@ a = Analysis(
         'anyio._backends._trio',
         'httpx',
         'httpcore',
+        # RTL / Arabic text rendering
+        'arabic_reshaper',
+        'bidi',
+        'bidi.algorithm',
     ],
     hookspath=[],
     hooksconfig={},

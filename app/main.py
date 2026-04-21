@@ -179,6 +179,7 @@ class App:
         history.add(
             task_name  = task.name,
             raw_output = task.raw_output,
+            rtl        = task.rtl,
             content    = content,
             screenshot = img,
         )
@@ -192,7 +193,7 @@ class App:
             )
 
         if task.raw_output:
-            self._analysis_win.show_raw_result(task.name, content, img)
+            self._analysis_win.show_raw_result(task.name, content, img, rtl=task.rtl)
         else:
             self._analysis_win.show_results(task.name, content, img)
 
@@ -210,6 +211,7 @@ class App:
                 f"[History] {entry.task_name}  {entry.timestamp}",
                 entry.content,
                 entry.screenshot,
+                rtl=entry.rtl,
             )
         else:
             self._analysis_win.show_results(
