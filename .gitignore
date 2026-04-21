@@ -1,0 +1,39 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec.bak
+
+# ── Virtual environment ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── PyInstaller build artefacts ───────────────────────────────────────────────
+# Keep the spec file (it's source), exclude compiled output
+dist/
+build/
+
+# ── App runtime files ─────────────────────────────────────────────────────────
+settings.json          # user-specific; never commit personal config
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs & temp ───────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
