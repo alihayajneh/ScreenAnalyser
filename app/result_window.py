@@ -310,7 +310,6 @@ def _build_raw_layout(
         selectbackground="#313244",
         font=("Segoe UI", 12) if rtl else ("Consolas", 11),
         cursor="arrow",
-        justify=tk.RIGHT if rtl else tk.LEFT,
     )
     sb = ttk.Scrollbar(txt_frame, orient=tk.VERTICAL, command=txt.yview)
     txt.configure(yscrollcommand=sb.set)
@@ -318,6 +317,16 @@ def _build_raw_layout(
     txt.grid(row=0, column=0, sticky="nsew")
 
     txt.insert(tk.END, text)
+
+    # Right-justify every line for RTL text.
+    # Must be done via a tag (Text widget does not accept justify= in constructor).
+    if rtl:
+        try:
+            txt.tag_configure("rtl", justify=tk.RIGHT)
+            txt.tag_add("rtl", "1.0", tk.END)
+        except tk.TclError:
+            pass
+
     txt.config(state=tk.DISABLED)
 
     win.bind("<MouseWheel>",
