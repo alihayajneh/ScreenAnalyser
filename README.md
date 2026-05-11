@@ -4,6 +4,16 @@ A lightweight Windows desktop application that lets you capture any region of yo
 
 ---
 
+## Latest Updates
+
+- Added a cleaned-up browser Settings page with separate Ollama, Translation, and Custom tasks panels.
+- Changed available Ollama models to a dropdown list populated from detected local and authenticated cloud models.
+- Added custom task support through `tasks.json`, including Settings-based create/edit/delete and automatic tray menu refresh.
+- Added a ready-to-use `tasks.json` pack with 15 custom tasks across UI/UX, code review, security, data, finance, legal, medical, academic, meetings, support, sales, project management, product comparison, accessibility, and language learning.
+- Fixed hotkey re-registration on devices where the `keyboard` package crashes inside `unhook_all_hotkeys()`.
+
+---
+
 ## Version 0.2 - Major Fixes
 
 Version 0.2 is a major stability and usability update focused on the issues found while testing across different Windows devices:
@@ -25,12 +35,14 @@ Version 0.2 is a major stability and usability update focused on the issues foun
 - **Full-screen capture** — capture the entire screen in one hotkey
 - **Clipboard image** — analyse an image you already copied
 - **Six built-in AI tasks** with dedicated hotkeys
+- **Custom tasks** loaded from `tasks.json`, editable from Settings, and shown in the tray menu
+- **Ready task pack** with 15 practical task templates across different domains
 - **Browser-rendered results** for consistent rich text, markdown, and RTL layout
 - **Save results** as `.md` / `.txt` and **save screenshots** as `.png`
 - **Analysis history** — last 20 results accessible from the tray menu
 - **Persistent progress popup** while capture/model processing is running
 - **Toast notifications** for completed clipboard copy actions
-- **Settings page** — switch models, add an Ollama API token, refresh model lists, configure translation, and toggle thinking mode
+- **Settings page** — choose models from a live dropdown, add an Ollama API token, configure translation, toggle thinking mode, and manage custom tasks
 - **About & Shortcuts** reference dialog
 - Runs entirely in the background as a **system-tray app** — no persistent window
 
@@ -47,6 +59,30 @@ Version 0.2 is a major stability and usability update focused on the issues foun
 | Find Errors & Fixes | `Ctrl+Alt+D` | Markdown section cards |
 | Summarise Document | `Ctrl+Alt+U` | Markdown section cards |
 | Full Screen Capture | `Ctrl+Alt+F` | Markdown section cards |
+
+---
+
+## Ready Custom Task Pack
+
+The repository includes [tasks.json](tasks.json) with 15 ready custom tasks:
+
+- UI/UX Review
+- Code Review
+- Security & Privacy Scan
+- Data & Chart Insights
+- Finance: Invoice/Receipt Extractor
+- Legal: Clause Scanner
+- Medical: Note Summarizer
+- Academic Paper Digest
+- Meeting Notes: Action Items
+- Customer Support Reply
+- Sales/CRM Brief
+- Project Risk Scan
+- Product Comparison
+- Accessibility Audit
+- Language Learning Explainer
+
+When running from source, the app reads `tasks.json` from the project root. When running the compiled exe, place `tasks.json` next to `ScreenAnalyser.exe`.
 
 ---
 
@@ -126,20 +162,22 @@ ScreenAnalyser/
 
 ## Adding a New Task
 
-Edit `app/tasks.py` — add a new `Task` entry to `BUILTIN_TASKS`:
+Use **Settings -> Custom tasks** to create or edit tasks. The app writes them to `tasks.json`:
 
-```python
-Task(
-    id          = "my_task",
-    name        = "My Task",
-    prompt      = "Your prompt here...",
-    hotkey      = "ctrl+alt+m",   # optional
-    auto_copy   = False,          # True → silently copy result to clipboard
-    raw_output  = False,          # True → plain text instead of section cards
-)
+```json
+{
+  "id": "my_task",
+  "name": "My Task",
+  "description": "What this task does",
+  "hotkey": "ctrl+alt+m",
+  "auto_copy": false,
+  "raw_output": false,
+  "rtl": false,
+  "prompt": "Your prompt here..."
+}
 ```
 
-No changes needed anywhere else — the task appears in the tray menu and hotkey is registered automatically.
+No code changes are needed. The task appears in the tray menu and its hotkey is registered automatically. Built-in tasks still live in `app/tasks.py`.
 
 ---
 
@@ -148,9 +186,11 @@ No changes needed anywhere else — the task appears in the tray menu and hotkey
 Right-click the tray icon → **Settings** to:
 
 - Select any Ollama model installed on your machine (with live refresh)
+- Choose available models from a dropdown list
 - Add an Ollama API token for authenticated cloud models
 - Configure translation source/target languages
 - Enable **thinking mode** for deeper step-by-step reasoning (qwen3 / deepseek-r1)
+- Create, edit, and delete custom tasks
 
 Settings are saved to `settings.json` next to the exe.
 

@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "ui_ux_review",
+      "name": "UI/UX Review",
+      "description": "Review an app or website screen for layout, hierarchy, friction, and visual polish.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a senior UI/UX reviewer. Analyze the screenshot and respond with EXACTLY these markdown sections:\n\n## First Impression\n2-3 bullets describing what the screen communicates and whether the layout feels clear.\n\n## UX Issues\nList concrete usability, spacing, alignment, navigation, readability, or interaction problems. If none are visible, write one bullet: None visible.\n\n## Recommended Fixes\nGive prioritized, practical changes that would improve the experience. Keep each fix actionable.\n\nUse precise visual language. Do not mention that you are looking at a screenshot."
+    },
+    {
+      "id": "code_review",
+      "name": "Code Review",
+      "description": "Review visible code for bugs, risky logic, readability problems, and missing tests.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a pragmatic code reviewer. Analyze all visible code, errors, file names, and terminal output. Respond with EXACTLY these markdown sections:\n\n## Findings\nList bugs, regressions, security risks, or maintainability problems ordered by severity. Include visible line numbers or identifiers when available. If no issues are visible, write one bullet: No clear issues visible.\n\n## Suggested Patch Direction\nDescribe the smallest safe fix for each finding.\n\n## Test Gaps\nList tests or manual checks that should be run.\n\nUse `backticks` for code, commands, paths, and identifiers."
+    },
+    {
+      "id": "security_privacy_scan",
+      "name": "Security & Privacy Scan",
+      "description": "Look for exposed secrets, risky permissions, unsafe URLs, and privacy-sensitive data.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a security and privacy reviewer. Inspect the visible screen for secrets, tokens, personal data, risky settings, unsafe permissions, suspicious URLs, or insecure workflows. Respond with EXACTLY these markdown sections:\n\n## Risks Found\nBullets with each visible risk and why it matters. If no risk is visible, write one bullet: None visible.\n\n## Immediate Actions\nConcrete steps to reduce risk, such as masking data, rotating keys, changing permissions, or verifying a domain.\n\n## Confidence\nState whether the evidence is High, Medium, or Low based only on what is visible.\n\nDo not invent hidden details."
+    },
+    {
+      "id": "data_chart_insights",
+      "name": "Data & Chart Insights",
+      "description": "Summarize charts, dashboards, tables, KPIs, and visible business metrics.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a data analyst. Analyze any visible chart, table, KPI, or dashboard. Respond with EXACTLY these markdown sections:\n\n## What The Data Shows\nSummarize the main trend, comparison, distribution, or status.\n\n## Important Numbers\nList visible numbers, labels, dates, percentages, or changes worth noting. Write N/A if none are readable.\n\n## Business Interpretation\nExplain what the visible data may imply and what decision or follow-up it suggests.\n\nBe careful to distinguish visible facts from inference."
+    },
+    {
+      "id": "finance_invoice_extractor",
+      "name": "Finance: Invoice/Receipt Extractor",
+      "description": "Extract vendor, dates, totals, tax, line items, and payment status from financial documents.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Extract structured finance details from the visible invoice, receipt, bill, quote, or payment screen. Respond with EXACTLY these markdown sections:\n\n## Document Summary\nIdentify the document type, vendor/customer, date, due date, currency, and payment status when visible.\n\n## Amounts\nList subtotal, tax/VAT, discounts, fees, total, paid amount, and balance due when visible.\n\n## Line Items\nList visible line items with quantity, description, unit price, and amount when readable.\n\n## Missing Or Unclear\nList fields that are not visible or not readable.\n\nDo not calculate unless the source values are visible; mark inferred values clearly."
+    },
+    {
+      "id": "legal_clause_scan",
+      "name": "Legal: Clause Scanner",
+      "description": "Summarize visible contract or policy clauses and flag obligations, dates, and risky terms.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a contract-reading assistant, not a lawyer. Analyze visible legal, policy, or terms text. Respond with EXACTLY these markdown sections:\n\n## Plain-English Summary\nSummarize the visible clause or policy in simple language.\n\n## Obligations And Deadlines\nList duties, dates, fees, renewal terms, cancellation terms, or notice requirements that are visible.\n\n## Clauses To Review Carefully\nFlag limitations of liability, indemnity, arbitration, privacy, exclusivity, termination, penalties, or unusual restrictions if visible.\n\nEnd with one sentence: This is an informational summary, not legal advice."
+    },
+    {
+      "id": "medical_note_summarizer",
+      "name": "Medical: Note Summarizer",
+      "description": "Summarize visible medical notes, labs, prescriptions, or appointment information without diagnosing.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a medical document summarizer, not a clinician. Analyze visible medical text, lab values, prescription details, or appointment information. Respond with EXACTLY these markdown sections:\n\n## Visible Information\nSummarize only what is readable on screen.\n\n## Key Items To Verify\nList medications, doses, dates, symptoms, lab values, provider names, or instructions that should be checked for accuracy.\n\n## Questions For A Clinician\nSuggest practical questions the user may ask a qualified medical professional.\n\nDo not diagnose, recommend treatment, or infer hidden medical facts. End with: This is not medical advice."
+    },
+    {
+      "id": "academic_paper_digest",
+      "name": "Academic Paper Digest",
+      "description": "Digest visible research text into topic, method, findings, and limitations.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a research assistant. Analyze the visible academic paper, slide, abstract, table, or figure. Respond with EXACTLY these markdown sections:\n\n## Research Question\nState what problem or question the visible content appears to address.\n\n## Method Or Evidence\nSummarize the visible method, data, experiment, or argument.\n\n## Findings\nList the main findings or claims that are visible.\n\n## Limitations Or Unknowns\nList what cannot be judged from the visible content.\n\nKeep the answer grounded in the visible material."
+    },
+    {
+      "id": "meeting_action_items",
+      "name": "Meeting Notes: Action Items",
+      "description": "Turn visible meeting notes, chat, or agenda content into decisions and action items.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Analyze the visible meeting notes, chat, agenda, transcript, or collaboration board. Respond with EXACTLY these markdown sections:\n\n## Decisions\nList decisions or agreements that are visible. Write N/A if none are visible.\n\n## Action Items\nList action items with owner and due date when visible. If owner or due date is missing, mark it as Unassigned or No date.\n\n## Open Questions\nList unresolved questions, blockers, or follow-ups.\n\nDo not invent names or dates."
+    },
+    {
+      "id": "customer_support_reply",
+      "name": "Customer Support Reply",
+      "description": "Draft a concise support response based on the visible customer message or ticket.",
+      "hotkey": "",
+      "auto_copy": true,
+      "raw_output": true,
+      "rtl": false,
+      "prompt": "Draft a professional customer support reply based only on the visible ticket, email, chat, or complaint. Output ONLY the reply text, with no markdown headings and no commentary.\n\nRules:\n- Acknowledge the customer issue clearly.\n- Ask for missing details only if required.\n- Give practical next steps.\n- Keep a calm, helpful tone.\n- Do not promise refunds, legal outcomes, medical advice, or technical fixes unless clearly supported by the visible text."
+    },
+    {
+      "id": "sales_crm_brief",
+      "name": "Sales/CRM Brief",
+      "description": "Summarize visible CRM, lead, account, or sales pipeline information.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a sales operations assistant. Analyze visible CRM, lead, account, pipeline, email, or call-note information. Respond with EXACTLY these markdown sections:\n\n## Account Snapshot\nSummarize the visible company/person, status, deal stage, amount, and timeline when available.\n\n## Buying Signals Or Risks\nList positive signals, objections, blockers, missing information, or churn risks visible on screen.\n\n## Next Best Actions\nSuggest concrete follow-up actions, including what to ask, send, or verify next.\n\nDo not invent private data or contact details."
+    },
+    {
+      "id": "project_risk_scan",
+      "name": "Project Risk Scan",
+      "description": "Review visible project boards, tickets, schedules, or roadmaps for risks and next steps.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a project manager. Analyze the visible project board, backlog, roadmap, sprint plan, ticket, or schedule. Respond with EXACTLY these markdown sections:\n\n## Current Status\nSummarize what appears to be in progress, blocked, done, or overdue.\n\n## Risks And Blockers\nList visible risks, dependencies, unclear ownership, scope creep, deadlines, or blocked work.\n\n## Recommended Next Steps\nGive concrete actions to clarify ownership, reduce risk, or move work forward.\n\nUse visible ticket names, dates, and statuses when readable."
+    },
+    {
+      "id": "product_comparison",
+      "name": "Product Comparison",
+      "description": "Compare visible product listings, plans, features, prices, reviews, or specs.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Analyze the visible product listings, subscription plans, feature tables, pricing pages, or specs. Respond with EXACTLY these markdown sections:\n\n## Options Visible\nList each visible option with name, price, rating, key specs, or plan details when readable.\n\n## Differences That Matter\nCompare the important tradeoffs such as price, performance, limits, warranty, compatibility, or missing features.\n\n## Best Fit\nRecommend which option looks best for common use cases, based only on visible information. Mark assumptions clearly."
+    },
+    {
+      "id": "accessibility_audit",
+      "name": "Accessibility Audit",
+      "description": "Check a UI for accessibility issues such as contrast, readability, focus, labels, and layout.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as an accessibility reviewer. Analyze the visible UI for accessibility concerns. Respond with EXACTLY these markdown sections:\n\n## Accessibility Issues\nList visible issues related to contrast, text size, touch targets, labels, focus indicators, hierarchy, motion, language direction, or keyboard usability. If none are visible, write one bullet: None obvious from the screenshot.\n\n## Impact\nExplain who may be affected and how.\n\n## Fixes\nGive practical UI changes that would improve accessibility.\n\nReference WCAG concepts when useful, but keep the language practical."
+    },
+    {
+      "id": "language_learning_explainer",
+      "name": "Language Learning Explainer",
+      "description": "Explain visible foreign-language text with vocabulary, grammar, and natural translation.",
+      "hotkey": "",
+      "auto_copy": false,
+      "raw_output": false,
+      "rtl": false,
+      "prompt": "Act as a language tutor. Analyze any visible non-English text or mixed-language text. Respond with EXACTLY these markdown sections:\n\n## Natural Translation\nTranslate the visible text into English while preserving meaning.\n\n## Vocabulary\nList important words or phrases with simple explanations.\n\n## Grammar Or Usage Notes\nExplain grammar, idioms, tone, formality, or cultural usage that helps a learner understand the text.\n\nIf the visible text is already English, explain style, tone, and key vocabulary instead."
+    }
+  ]
+}

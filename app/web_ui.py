@@ -28,7 +28,15 @@ from PIL import Image
 
 from .config import ICON_PATH, cfg
 from .ollama_utils import list_models
-from .tasks import BUILTIN_TASKS, LANGUAGES
+from .tasks import (
+    BUILTIN_TASKS,
+    LANGUAGES,
+    all_tasks,
+    custom_tasks_payload,
+    save_custom_tasks_payload,
+    task_to_dict,
+    tasks_file_path,
+)
 
 
 def _image_data_url(image: Optional[Image.Image]) -> str:
@@ -308,6 +316,33 @@ class _BrowserUI:
             cfg.translate_to = value if value in LANGUAGES else "English"
         return self.settings_payload()
 
+    def tasks_payload(self) -> dict[str, Any]:
+        return {
+            "tasks_file": tasks_file_path(),
+            "builtin_tasks": [task_to_dict(task) for task in BUILTIN_TASKS.values()],
+            "custom_tasks": custom_tasks_payload(),
+        }
+
+    def save_tasks(self, data: dict[str, Any]) -> dict[str, Any]:
+        raw_tasks = data.get("tasks", [])
+        if not isinstance(raw_tasks, list):
+            raise ValueError("Tasks payload must be a list")
+        custom_tasks = save_custom_tasks_payload(raw_tasks)
+        self._notify_tasks_changed()
+        return {
+            "tasks_file": tasks_file_path(),
+            "builtin_tasks": [task_to_dict(task) for task in BUILTIN_TASKS.values()],
+            "custom_tasks": custom_tasks,
+        }
+
+    def _notify_tasks_changed(self) -> None:
+        try:
+            from .state import ui_queue
+
+            ui_queue.put(("tasks_changed", None))
+        except Exception:
+            pass
+
 
 _UI = _BrowserUI()
 
@@ -418,6 +453,9 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/api/settings":
             self._send_json(self.ui.settings_payload())
             return
+        if path == "/api/tasks":
+            self._send_json(self.ui.tasks_payload())
+            return
         if path == "/api/models":
             query = parse_qs(parsed.query)
             api_key = query.get("api_key", [cfg.ollama_api_key])[0]
@@ -444,6 +482,13 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send_json({"models": list_models(api_key)})
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"models": [], "error": str(exc)}, status=400)
+            return
+        if path == "/api/tasks":
+            try:
+                data = self._read_json()
+                self._send_json({"ok": True, **self.ui.save_tasks(data)})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"ok": False, "error": str(exc)}, status=400)
             return
 
         self._send_json({"error": "Not found"}, status=404)
@@ -520,7 +565,7 @@ def _settings_page() -> str:
 
 def _about_page() -> str:
     task_rows = []
-    for task in BUILTIN_TASKS.values():
+    for task in all_tasks().values():
         hotkey = task.hotkey.upper() if task.hotkey else "-"
         task_rows.append(
             '<div class="shortcut-row">'
@@ -1154,12 +1199,32 @@ _SETTINGS_TEMPLATE = """<!doctype html>
       gap: 14px;
       margin-bottom: 14px;
     }
+    .header-main {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+    .page-subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
     .settings-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, 36%);
-      grid-template-rows: auto auto;
       gap: 14px;
-      align-items: start;
+    }
+    .top-settings {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+      gap: 14px;
+      align-items: stretch;
     }
     h1 {
       margin: 0;
@@ -1184,17 +1249,27 @@ _SETTINGS_TEMPLATE = """<!doctype html>
       padding: 16px;
       margin-bottom: 0;
     }
-    .connection-panel { grid-column: 1; grid-row: 1; }
-    .translation-panel { grid-column: 1; grid-row: 2; }
-    .models-panel {
-      grid-column: 2;
-      grid-row: 1 / span 2;
-      position: sticky;
-      top: 18px;
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
     }
-    .grid {
+    .panel-title {
+      margin: 0;
+      color: #123b63;
+      font-size: 15px;
+    }
+    .panel-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .grid,
+    .field-grid {
       display: grid;
-      grid-template-columns: 180px minmax(0, 1fr);
+      grid-template-columns: 150px minmax(0, 1fr);
       gap: 12px 16px;
       align-items: center;
     }
@@ -1202,24 +1277,38 @@ _SETTINGS_TEMPLATE = """<!doctype html>
       font-weight: 700;
       color: #24324a;
     }
-    input, select {
+    input, select, textarea {
       width: 100%;
       border: 1px solid #c9d4e2;
       border-radius: 6px;
       padding: 9px 10px;
+      min-height: 38px;
       font: 14px "Segoe UI", Tahoma, Arial, sans-serif;
       color: var(--text);
       background: #fff;
     }
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+      line-height: 1.45;
+    }
     input.mono {
+      font-family: Consolas, "Cascadia Mono", monospace;
+    }
+    select.mono {
       font-family: Consolas, "Cascadia Mono", monospace;
     }
     .row {
       display: flex;
       gap: 8px;
       align-items: center;
+      min-width: 0;
     }
-    .row input { flex: 1; }
+    .row input,
+    .row select {
+      flex: 1;
+      min-width: 0;
+    }
     button {
       appearance: none;
       border: 1px solid #c9d4e2;
@@ -1267,36 +1356,6 @@ _SETTINGS_TEMPLATE = """<!doctype html>
     }
     .status.ok { color: var(--ok); }
     .status.err { color: var(--danger); }
-    .model-list {
-      display: grid;
-      gap: 8px;
-      max-height: calc(100vh - 160px);
-      min-height: 430px;
-      overflow: auto;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
-      background: #fbfdff;
-    }
-    .model-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      width: 100%;
-      text-align: left;
-      border: 1px solid #dce4ee;
-      background: #fff;
-      border-radius: 6px;
-      padding: 9px 10px;
-      font-family: Consolas, "Cascadia Mono", monospace;
-      font-weight: 600;
-    }
-    .model-item.selected {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: #064b45;
-    }
     .empty {
       padding: 10px;
       color: var(--muted);
@@ -1314,66 +1373,185 @@ _SETTINGS_TEMPLATE = """<!doctype html>
       width: 18px;
       height: 18px;
     }
+    .task-editor {
+      display: grid;
+      grid-template-columns: minmax(220px, 30%) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .task-list {
+      display: grid;
+      gap: 8px;
+      max-height: 440px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfdff;
+    }
+    .task-item {
+      display: grid;
+      gap: 3px;
+      width: 100%;
+      text-align: left;
+      border: 1px solid #dce4ee;
+      background: #fff;
+      border-radius: 6px;
+      padding: 9px 10px;
+      white-space: normal;
+    }
+    .task-item.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: #064b45;
+    }
+    .task-item small {
+      color: var(--muted);
+      font: 12px Consolas, "Cascadia Mono", monospace;
+    }
+    .task-form {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .task-checks {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .task-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
   <main class="page">
     <header>
-      <h1 class="brand"><img class="app-icon" src="/icon-192.png" alt=""><span>Settings</span></h1>
-      <button class="primary icon-btn" type="button" onclick="saveSettings()">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></svg>
-        <span>Save settings</span>
-      </button>
+      <div class="header-main">
+        <h1 class="brand"><img class="app-icon" src="/icon-192.png" alt=""><span>Settings</span></h1>
+        <p class="page-subtitle">Model, translation, and task preferences</p>
+      </div>
+      <div class="header-actions">
+        <span id="settingsStatus" class="status"></span>
+        <button class="primary icon-btn" type="button" onclick="saveSettings()">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></svg>
+          <span>Save</span>
+        </button>
+      </div>
     </header>
 
     <div class="settings-layout">
-    <section class="panel connection-panel">
-      <div class="grid">
-        <label for="apiKey">Ollama API token</label>
-        <div class="row">
-          <input id="apiKey" type="password" autocomplete="off" spellcheck="false">
-          <button class="icon-btn" type="button" onclick="toggleToken()">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            <span>Show</span>
-          </button>
+      <div class="top-settings">
+        <section class="panel connection-panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Ollama</h2>
+            <span id="modelStatus" class="status"></span>
+          </div>
+          <div class="field-grid">
+            <label for="apiKey">API token</label>
+            <div class="row">
+              <input id="apiKey" type="password" autocomplete="off" spellcheck="false">
+              <button class="icon-btn" type="button" onclick="toggleToken()">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <span>Show</span>
+              </button>
+            </div>
+            <div class="hint">Required for Ollama cloud models only.</div>
+
+            <label for="model">Model</label>
+            <div class="row">
+              <select id="model" class="mono"></select>
+              <button class="icon-btn" type="button" onclick="refreshModels()">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"></path><path d="M3 16v5h5"></path><path d="M3 12A9 9 0 0 1 18.4 5.6L21 8"></path><path d="M21 8V3h-5"></path></svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+            <div id="modelHint" class="hint">Loading available models...</div>
+          </div>
+        </section>
+
+        <section class="panel translation-panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Translation</h2>
+          </div>
+          <div class="field-grid">
+            <label for="fromLang">From</label>
+            <select id="fromLang"></select>
+
+            <label for="toLang">To</label>
+            <select id="toLang"></select>
+
+            <label>Thinking</label>
+            <label class="toggle">
+              <input id="thinking" type="checkbox">
+              Enabled
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel tasks-panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Custom tasks</h2>
+            <div class="panel-subtitle">Tasks are saved in Tasks.json and appear in the tray menu.</div>
+          </div>
+          <span id="taskStatus" class="status"></span>
         </div>
-        <div class="hint">Only needed for cloud models from ollama.com. Local models do not need a token.</div>
-
-        <label for="model">Model</label>
-        <div class="row">
-          <input id="model" class="mono" type="text" spellcheck="false">
-          <button class="icon-btn" type="button" onclick="refreshModels()">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"></path><path d="M3 16v5h5"></path><path d="M3 12A9 9 0 0 1 18.4 5.6L21 8"></path><path d="M21 8V3h-5"></path></svg>
-            <span>Refresh models</span>
-          </button>
+      <div class="task-editor">
+        <div>
+          <div class="task-list" id="taskList">
+            <div class="empty">Loading tasks...</div>
+          </div>
+          <div class="row" style="margin-top: 10px;">
+            <button class="icon-btn" type="button" onclick="newTask()">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+              <span>New task</span>
+            </button>
+            <button class="icon-btn" type="button" onclick="deleteTask()">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
+              <span>Delete</span>
+            </button>
+          </div>
         </div>
-        <div class="hint">Available models are always listed below. Click one to use it, or type a custom model name.</div>
-      </div>
-    </section>
-
-    <section class="panel models-panel">
-      <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
-        <label>Available models on this device/account</label>
-        <span id="modelStatus" class="status"></span>
-      </div>
-      <div id="modelList" class="model-list">
-        <div class="empty">Loading models...</div>
-      </div>
-    </section>
-
-    <section class="panel translation-panel">
-      <div class="grid">
-        <label for="fromLang">Translate from</label>
-        <select id="fromLang"></select>
-
-        <label for="toLang">Translate to</label>
-        <select id="toLang"></select>
-
-        <label>Thinking mode</label>
-        <label class="toggle">
-          <input id="thinking" type="checkbox">
-          Enable model thinking when the selected model supports it
-        </label>
+        <div class="task-form">
+          <div class="task-grid">
+            <label>Name
+              <input id="taskName" type="text" spellcheck="false">
+            </label>
+            <label>ID
+              <input id="taskId" class="mono" type="text" spellcheck="false">
+            </label>
+            <label>Hotkey
+              <input id="taskHotkey" class="mono" type="text" spellcheck="false" placeholder="ctrl+alt+m">
+            </label>
+            <label>Description
+              <input id="taskDescription" type="text" spellcheck="false">
+            </label>
+          </div>
+          <label>Prompt
+            <textarea id="taskPrompt" spellcheck="false"></textarea>
+          </label>
+          <div class="task-checks">
+            <label class="toggle"><input id="taskRaw" type="checkbox"> Raw text output</label>
+            <label class="toggle"><input id="taskAutoCopy" type="checkbox"> Auto-copy result</label>
+            <label class="toggle"><input id="taskRtl" type="checkbox"> RTL result</label>
+          </div>
+          <div class="task-actions">
+            <button class="primary icon-btn" type="button" onclick="saveTask()">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></svg>
+              <span>Save task</span>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
     </div>
@@ -1382,10 +1560,8 @@ _SETTINGS_TEMPLATE = """<!doctype html>
   <script>
     let settings = null;
     let models = [];
-    const ICONS = {
-      check: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m20 6-11 11-5-5"></path></svg>',
-      plus: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>'
-    };
+    let customTasks = [];
+    let selectedTaskId = null;
 
     function setAppWidth() {
       const width = Math.max(900, Math.round(window.screen.availWidth * 0.70));
@@ -1417,11 +1593,11 @@ _SETTINGS_TEMPLATE = """<!doctype html>
       const response = await fetch("/api/settings", { cache: "no-store" });
       settings = await response.json();
       document.getElementById("apiKey").value = settings.ollama_api_key || "";
-      document.getElementById("model").value = settings.model || "";
       document.getElementById("thinking").checked = Boolean(settings.thinking);
       fillSelect("fromLang", settings.from_languages || [], settings.translate_from);
       fillSelect("toLang", settings.languages || [], settings.translate_to);
       refreshModels();
+      loadTasks();
     }
 
     function toggleToken() {
@@ -1429,32 +1605,61 @@ _SETTINGS_TEMPLATE = """<!doctype html>
       input.type = input.type === "password" ? "text" : "password";
     }
 
-    function renderModels() {
-      const list = document.getElementById("modelList");
-      const current = document.getElementById("model").value;
-      if (!models.length) {
-        list.innerHTML = `<div class="empty">No models were found. Check that Ollama is running, or add an Ollama cloud token and refresh.</div>`;
-        return;
-      }
-      list.innerHTML = models.map((name) => {
-        const selected = name === current ? " selected" : "";
-        return `<button type="button" class="model-item${selected}" onclick="chooseModel('${encodeURIComponent(name)}')">
-          <span>${escapeHtml(name)}</span>
-          <span class="icon-btn">${selected ? ICONS.check : ICONS.plus}<span>${selected ? "Selected" : "Use"}</span></span>
-        </button>`;
-      }).join("");
+    function setSettingsStatus(message, ok = true) {
+      const status = document.getElementById("settingsStatus");
+      status.className = ok ? "status ok" : "status err";
+      status.textContent = message || "";
     }
 
-    function chooseModel(encodedName) {
-      document.getElementById("model").value = decodeURIComponent(encodedName);
-      renderModels();
+    function setModelLoading(message) {
+      const select = document.getElementById("model");
+      select.disabled = true;
+      select.innerHTML = `<option value="">${escapeHtml(message)}</option>`;
+      document.getElementById("modelHint").textContent = message;
+    }
+
+    function renderModels() {
+      const select = document.getElementById("model");
+      const hint = document.getElementById("modelHint");
+      const status = document.getElementById("modelStatus");
+      const saved = settings?.model || "";
+      const current = select.value || saved;
+      const names = Array.from(new Set(models.filter(Boolean)));
+
+      if (!names.length) {
+        select.disabled = true;
+        select.innerHTML = `<option value="">No models found</option>`;
+        hint.textContent = saved
+          ? `Saved model "${saved}" is not currently visible.`
+          : "No available models found.";
+        return;
+      }
+
+      select.disabled = false;
+      select.innerHTML = names.map((name) => {
+        return `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+      }).join("");
+
+      const next = names.includes(current)
+        ? current
+        : (names.includes(saved) ? saved : names[0]);
+      select.value = next;
+
+      status.className = "status ok";
+      status.textContent = `${names.length} found`;
+      if (saved && !names.includes(saved)) {
+        status.className = "status err";
+        hint.textContent = `Saved model "${saved}" was not found. Save to use "${next}".`;
+      } else {
+        hint.textContent = "Available models are loaded in the dropdown.";
+      }
     }
 
     async function refreshModels() {
       const status = document.getElementById("modelStatus");
       status.className = "status";
       status.textContent = "Fetching...";
-      document.getElementById("modelList").innerHTML = `<div class="empty">Loading models...</div>`;
+      setModelLoading("Loading models...");
       try {
         const response = await fetch("/api/models", {
           method: "POST",
@@ -1464,7 +1669,7 @@ _SETTINGS_TEMPLATE = """<!doctype html>
         const data = await response.json();
         models = data.models || [];
         status.className = models.length ? "status ok" : "status err";
-        status.textContent = models.length ? `${models.length} model(s) found` : "No models found";
+        status.textContent = models.length ? `${models.length} found` : "No models found";
         renderModels();
       } catch (err) {
         models = [];
@@ -1477,7 +1682,7 @@ _SETTINGS_TEMPLATE = """<!doctype html>
     async function saveSettings() {
       const payload = {
         ollama_api_key: document.getElementById("apiKey").value,
-        model: document.getElementById("model").value,
+        model: document.getElementById("model").value || settings?.model || "",
         thinking: document.getElementById("thinking").checked,
         translate_from: document.getElementById("fromLang").value,
         translate_to: document.getElementById("toLang").value
@@ -1488,19 +1693,171 @@ _SETTINGS_TEMPLATE = """<!doctype html>
         body: JSON.stringify(payload)
       });
       const data = await response.json();
-      const status = document.getElementById("modelStatus");
       if (data.ok) {
         settings = data.settings;
-        status.className = "status ok";
-        status.textContent = "Saved";
+        setSettingsStatus("Saved");
         renderModels();
       } else {
-        status.className = "status err";
-        status.textContent = data.error || "Save failed";
+        setSettingsStatus(data.error || "Save failed", false);
       }
     }
 
-    document.getElementById("model").addEventListener("input", renderModels);
+    function setTaskStatus(message, ok = true) {
+      const status = document.getElementById("taskStatus");
+      status.className = ok ? "status ok" : "status err";
+      status.textContent = message || "";
+    }
+
+    function slugTaskId(value) {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_ -]+/g, "")
+        .replace(/[\\s-]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    }
+
+    function taskFromForm() {
+      const name = document.getElementById("taskName").value.trim();
+      const id = slugTaskId(document.getElementById("taskId").value || name);
+      const prompt = document.getElementById("taskPrompt").value.trim();
+      if (!name) {
+        throw new Error("Task name is required");
+      }
+      if (!prompt) {
+        throw new Error("Task prompt is required");
+      }
+      if (!id) {
+        throw new Error("Task ID is required");
+      }
+      return {
+        id,
+        name,
+        prompt,
+        description: document.getElementById("taskDescription").value.trim(),
+        hotkey: document.getElementById("taskHotkey").value.trim().toLowerCase(),
+        raw_output: document.getElementById("taskRaw").checked,
+        auto_copy: document.getElementById("taskAutoCopy").checked,
+        rtl: document.getElementById("taskRtl").checked
+      };
+    }
+
+    function setTaskForm(task) {
+      document.getElementById("taskName").value = task?.name || "";
+      document.getElementById("taskId").value = task?.id || "";
+      document.getElementById("taskHotkey").value = task?.hotkey || "";
+      document.getElementById("taskDescription").value = task?.description || "";
+      document.getElementById("taskPrompt").value = task?.prompt || "";
+      document.getElementById("taskRaw").checked = Boolean(task?.raw_output);
+      document.getElementById("taskAutoCopy").checked = Boolean(task?.auto_copy);
+      document.getElementById("taskRtl").checked = Boolean(task?.rtl);
+    }
+
+    function renderTasks() {
+      const list = document.getElementById("taskList");
+      if (!customTasks.length) {
+        list.innerHTML = `<div class="empty">No custom tasks yet.</div>`;
+        return;
+      }
+      list.innerHTML = customTasks.map((task) => {
+        const selected = task.id === selectedTaskId ? " selected" : "";
+        const meta = [task.hotkey || "tray only", task.raw_output ? "raw" : "markdown"].join(" / ");
+        return `<button type="button" class="task-item${selected}" onclick="selectTask('${encodeURIComponent(task.id)}')">
+          <strong>${escapeHtml(task.name)}</strong>
+          <small>${escapeHtml(task.id)} - ${escapeHtml(meta)}</small>
+        </button>`;
+      }).join("");
+    }
+
+    function selectTask(encodedId) {
+      selectedTaskId = decodeURIComponent(encodedId);
+      const task = customTasks.find((item) => item.id === selectedTaskId);
+      setTaskForm(task || null);
+      renderTasks();
+    }
+
+    function newTask() {
+      selectedTaskId = null;
+      setTaskForm(null);
+      renderTasks();
+      setTaskStatus("");
+      document.getElementById("taskName").focus();
+    }
+
+    async function loadTasks() {
+      const list = document.getElementById("taskList");
+      list.innerHTML = `<div class="empty">Loading tasks...</div>`;
+      try {
+        const response = await fetch("/api/tasks", { cache: "no-store" });
+        const data = await response.json();
+        customTasks = data.custom_tasks || [];
+        if (selectedTaskId && !customTasks.some((task) => task.id === selectedTaskId)) {
+          selectedTaskId = null;
+          setTaskForm(null);
+        }
+        renderTasks();
+      } catch (err) {
+        customTasks = [];
+        renderTasks();
+        setTaskStatus("Could not load tasks", false);
+      }
+    }
+
+    async function persistTasks() {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks: customTasks })
+      });
+      const data = await response.json();
+      if (!data.ok) {
+        throw new Error(data.error || "Task save failed");
+      }
+      customTasks = data.custom_tasks || [];
+      renderTasks();
+    }
+
+    async function saveTask() {
+      try {
+        const task = taskFromForm();
+        const existingIndex = customTasks.findIndex((item) => item.id === selectedTaskId || item.id === task.id);
+        if (existingIndex >= 0) {
+          customTasks[existingIndex] = task;
+        } else {
+          customTasks.push(task);
+        }
+        selectedTaskId = task.id;
+        setTaskForm(task);
+        await persistTasks();
+        setTaskStatus("Task saved");
+      } catch (err) {
+        setTaskStatus(err.message || "Task save failed", false);
+      }
+    }
+
+    async function deleteTask() {
+      if (!selectedTaskId) {
+        setTaskStatus("Select a task first", false);
+        return;
+      }
+      customTasks = customTasks.filter((task) => task.id !== selectedTaskId);
+      selectedTaskId = null;
+      setTaskForm(null);
+      try {
+        await persistTasks();
+        setTaskStatus("Task deleted");
+      } catch (err) {
+        setTaskStatus(err.message || "Task delete failed", false);
+      }
+    }
+
+    document.getElementById("model").addEventListener("change", () => setSettingsStatus(""));
+    document.getElementById("taskName").addEventListener("input", () => {
+      const idInput = document.getElementById("taskId");
+      if (!idInput.value.trim()) {
+        idInput.value = slugTaskId(document.getElementById("taskName").value);
+      }
+    });
     loadSettings();
   </script>
 </body>

@@ -27,8 +27,13 @@ Auto-copy
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
+import json
+import re
+import threading
+from dataclasses import dataclass
+from typing import Any, Optional
+
+from .config import writable_path
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -154,6 +159,55 @@ class Task:
 #  Keys are stable IDs used for settings persistence.
 #  Order determines the tray menu order.
 
+_TASKS_FILE = writable_path("tasks.json")
+_TASKS_LOCK = threading.RLock()
+
+
+def _normalise_task_id(value: str) -> str:
+    value = value.strip().lower()
+    value = re.sub(r"[^a-z0-9_ -]+", "", value)
+    value = re.sub(r"[\s-]+", "_", value)
+    return value.strip("_")
+
+
+def task_to_dict(task: Task) -> dict[str, Any]:
+    return {
+        "id": task.id,
+        "name": task.name,
+        "prompt": task.prompt,
+        "description": task.description,
+        "hotkey": task.hotkey or "",
+        "auto_copy": task.auto_copy,
+        "raw_output": task.raw_output,
+        "rtl": task.rtl,
+    }
+
+
+def task_from_dict(data: dict[str, Any]) -> Task:
+    name = str(data.get("name", "")).strip()
+    prompt = str(data.get("prompt", "")).strip()
+    task_id = _normalise_task_id(str(data.get("id", "")).strip() or name)
+
+    if not name:
+        raise ValueError("Task name is required")
+    if not prompt:
+        raise ValueError("Task prompt is required")
+    if not task_id:
+        raise ValueError("Task id is required")
+
+    hotkey = str(data.get("hotkey", "")).strip().lower() or None
+    return Task(
+        id=task_id,
+        name=name,
+        prompt=prompt,
+        description=str(data.get("description", "")).strip(),
+        hotkey=hotkey,
+        auto_copy=bool(data.get("auto_copy", False)),
+        raw_output=bool(data.get("raw_output", False)),
+        rtl=bool(data.get("rtl", False)),
+    )
+
+
 BUILTIN_TASKS: dict[str, Task] = {
     "describe": Task(
         id          = "describe",
@@ -205,4 +259,76 @@ BUILTIN_TASKS: dict[str, Task] = {
 
 def get(task_id: str) -> Task:
     """Return a Task by ID, falling back to 'describe' if unknown."""
-    return BUILTIN_TASKS.get(task_id, BUILTIN_TASKS["describe"])
+    return all_tasks().get(task_id, BUILTIN_TASKS["describe"])
+
+
+def load_custom_tasks() -> dict[str, Task]:
+    """Load user-defined tasks from tasks.json as Task instances."""
+    with _TASKS_LOCK:
+        try:
+            if not _TASKS_FILE.exists():
+                return {}
+            data = json.loads(_TASKS_FILE.read_text("utf-8"))
+        except Exception:
+            return {}
+
+        raw_tasks = data.get("tasks", data if isinstance(data, list) else [])
+        if not isinstance(raw_tasks, list):
+            return {}
+
+        tasks: dict[str, Task] = {}
+        for raw in raw_tasks:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                task = task_from_dict(raw)
+            except ValueError:
+                continue
+            if task.id in BUILTIN_TASKS or task.id in tasks:
+                continue
+            tasks[task.id] = task
+        return tasks
+
+
+def save_custom_tasks(tasks: list[Task]) -> list[Task]:
+    """Persist custom tasks to tasks.json and return the normalized list."""
+    normalized: dict[str, Task] = {}
+    for task in tasks:
+        task.id = _normalise_task_id(task.id or task.name)
+        if not task.id:
+            raise ValueError("Task id is required")
+        if task.id in BUILTIN_TASKS:
+            raise ValueError(f"`{task.id}` is reserved for a built-in task")
+        if task.id in normalized:
+            raise ValueError(f"Duplicate task id `{task.id}`")
+        normalized[task.id] = task
+
+    payload = {
+        "version": 1,
+        "tasks": [task_to_dict(task) for task in normalized.values()],
+    }
+    with _TASKS_LOCK:
+        _TASKS_FILE.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False),
+            "utf-8",
+        )
+    return list(normalized.values())
+
+
+def custom_tasks_payload() -> list[dict[str, Any]]:
+    return [task_to_dict(task) for task in load_custom_tasks().values()]
+
+
+def save_custom_tasks_payload(raw_tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    tasks = [task_from_dict(raw) for raw in raw_tasks if isinstance(raw, dict)]
+    return [task_to_dict(task) for task in save_custom_tasks(tasks)]
+
+
+def all_tasks() -> dict[str, Task]:
+    tasks = dict(BUILTIN_TASKS)
+    tasks.update(load_custom_tasks())
+    return tasks
+
+
+def tasks_file_path() -> str:
+    return str(_TASKS_FILE)

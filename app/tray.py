@@ -26,7 +26,7 @@ from PIL import Image, ImageDraw
 
 from .config  import ICON_PATH, TRAY_TOOLTIP
 from .history import history
-from .tasks   import BUILTIN_TASKS, Task
+from .tasks   import Task, all_tasks
 
 
 def _build_icon_image() -> Image.Image:
@@ -107,14 +107,12 @@ class SystemTray:
             self._on_history(entry_id)
         return _cb
 
-    def _build_tasks_submenu(self) -> pystray.Menu:
-        items = []
-        for task in BUILTIN_TASKS.values():
+    def _build_tasks_items(self):
+        for task in all_tasks().values():
             label = task.name
             if task.hotkey:
                 label += f"   {task.hotkey.upper()}"
-            items.append(pystray.MenuItem(label, self._task_cb(task)))
-        return pystray.Menu(*items)
+            yield pystray.MenuItem(label, self._task_cb(task))
 
     def _build_history_items(self):
         """
@@ -150,7 +148,7 @@ class SystemTray:
             # ── Tasks submenu ─────────────────────────────────────────────
             pystray.MenuItem(
                 "Tasks",
-                self._build_tasks_submenu(),
+                pystray.Menu(self._build_tasks_items),
             ),
 
             # ── Quick Capture submenu ─────────────────────────────────────
@@ -195,3 +193,10 @@ class SystemTray:
     def stop(self) -> None:
         if self._icon:
             self._icon.stop()
+
+    def refresh(self) -> None:
+        if self._icon:
+            try:
+                self._icon.update_menu()
+            except Exception:
+                pass

@@ -30,7 +30,7 @@ from .ollama_utils     import resolve_model
 from .result_window    import AnalysisWindow, show_error_popup
 from .selector         import RegionSelector
 from .state            import processing_lock, ui_queue
-from .tasks            import BUILTIN_TASKS, RTL_LANGUAGES, Task, get as get_task, make_translate_prompt
+from .tasks            import RTL_LANGUAGES, Task, all_tasks, get as get_task, make_translate_prompt
 from .toast            import show_toast
 from .tray             import SystemTray
 from .web_ui           import show_about, show_settings, start_browser_ui, stop_browser_ui
@@ -57,6 +57,7 @@ class App:
         self._analysis_win: AnalysisWindow | None = None
         self._selector:     RegionSelector | None = None
         self._tray:         SystemTray | None     = None
+        self._hotkey_handles: list[object]        = []
 
     # ── Public entry point ────────────────────────────────────────────────────
 
@@ -97,21 +98,39 @@ class App:
 
     def _register_hotkeys(self) -> None:
         """Register a global hotkey for every task that declares one, plus quick-capture."""
-        for task in BUILTIN_TASKS.values():
+        self._clear_hotkeys()
+        for task in all_tasks().values():
             if task.hotkey:
                 _id = task.id
-                keyboard.add_hotkey(
-                    task.hotkey,
-                    lambda tid=_id: ui_queue.put(("show_selector", tid)),
-                    suppress=False,
-                )
+                try:
+                    handle = keyboard.add_hotkey(
+                        task.hotkey,
+                        lambda tid=_id: ui_queue.put(("show_selector", tid)),
+                        suppress=False,
+                    )
+                    self._hotkey_handles.append(handle)
+                except Exception:
+                    pass
 
         # Full-screen quick-capture hotkey
-        keyboard.add_hotkey(
-            _FULLSCREEN_HOTKEY,
-            lambda: ui_queue.put(("quick_capture", "fullscreen")),
-            suppress=False,
-        )
+        try:
+            handle = keyboard.add_hotkey(
+                _FULLSCREEN_HOTKEY,
+                lambda: ui_queue.put(("quick_capture", "fullscreen")),
+                suppress=False,
+            )
+            self._hotkey_handles.append(handle)
+        except Exception:
+            pass
+
+    def _clear_hotkeys(self) -> None:
+        """Remove only hotkeys registered by this app instance."""
+        for handle in self._hotkey_handles:
+            try:
+                keyboard.remove_hotkey(handle)
+            except Exception:
+                pass
+        self._hotkey_handles.clear()
 
     # ── Queue polling (100 ms tick on main thread) ────────────────────────────
 
@@ -156,6 +175,11 @@ class App:
         elif msg_type == "history_clear":
             history.clear()
 
+        elif msg_type == "tasks_changed":
+            self._register_hotkeys()
+            if self._tray is not None:
+                self._tray.refresh()
+
         elif msg_type == "show_settings":
             show_settings()
 
@@ -163,7 +187,7 @@ class App:
             show_about()
 
         elif msg_type == "quit":
-            keyboard.unhook_all_hotkeys()
+            self._clear_hotkeys()
             stop_browser_ui()
             self._root.destroy()
 
