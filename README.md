@@ -1,170 +1,145 @@
 # Screen Analyser
 
-A lightweight Windows desktop application that lets you capture any region of your screen and analyse it instantly with an AI vision model through [Ollama](https://ollama.com). It supports local Ollama models and optional authenticated Ollama cloud models.
+Screen Analyser is a lightweight Windows tray application for capturing any
+screen region and analysing it with Ollama vision models. It supports local
+Ollama models, authenticated Ollama cloud models, browser-rendered results, RTL
+translation output, and user-defined analysis tasks.
 
 ![Screen Analyser app screenshot](screenshot_1.png)
 
----
+## Highlights
 
-## Latest Updates
+- Capture a selected screen region, the full screen, or a clipboard image.
+- Run built-in tasks for description, OCR, translation, deep explanation,
+  error finding, and document summarisation.
+- Add custom tasks from Settings without changing code.
+- Choose available Ollama models from a live dropdown list.
+- Use local Ollama models or authenticated Ollama cloud models.
+- View rich markdown and RTL text through the browser rendering engine.
+- Save results as `.md` or `.txt`, and save screenshots as `.png`.
+- Access the app from the Windows system tray with global hotkeys.
 
-- Added a cleaned-up browser Settings page with separate Ollama, Translation, and Custom tasks panels.
-- Changed available Ollama models to a dropdown list populated from detected local and authenticated cloud models.
-- Added custom task support through `tasks.json`, including Settings-based create/edit/delete and automatic tray menu refresh.
-- Added a ready-to-use `tasks.json` pack with 15 custom tasks across UI/UX, code review, security, data, finance, legal, medical, academic, meetings, support, sales, project management, product comparison, accessibility, and language learning.
-- Fixed hotkey re-registration on devices where the `keyboard` package crashes inside `unhook_all_hotkeys()`.
+## What's New
 
----
+Version 0.2 is a major stability and usability update focused on Windows device
+compatibility, model selection, and UI quality.
 
-## Version 0.2 - Major Fixes
+- Replaced Tkinter result/settings/about screens with a browser-rendered app UI.
+- Added a cleaner Settings page with separate Ollama, Translation, and Custom
+  tasks panels.
+- Replaced the model text field with a dropdown populated from detected local
+  and authenticated cloud models.
+- Added custom task persistence through `tasks.json`, with create/edit/delete
+  support in Settings.
+- Added a ready task pack with 15 custom tasks across different work domains.
+- Fixed capture regressions where screenshots could appear to do nothing.
+- Improved RTL output for Arabic, Hebrew, Persian, Urdu, and other RTL text.
+- Reworked progress feedback into a small persistent popup while analysis runs.
+- Fixed hotkey re-registration on devices where the `keyboard` package crashes
+  inside `unhook_all_hotkeys()`.
 
-Version 0.2 is a major stability and usability update focused on the issues found while testing across different Windows devices:
-
-- Replaced the old Tkinter result/settings/about surfaces with a browser-rendered app UI for more consistent layout and text rendering.
-- Fixed RTL translation display for Arabic, Hebrew, Persian, Urdu, and other right-to-left outputs by relying on browser text layout instead of Tkinter text widgets.
-- Added robust Ollama model discovery with clear fallback behavior when the configured default model is not available.
-- Added Ollama API token support so authenticated cloud models can be used from Settings.
-- Fixed screenshot/capture flow regressions where capturing could silently do nothing.
-- Reworked progress feedback into a small persistent popup that stays visible until results or errors are ready.
-- Updated result windows to open as a fixed 70% screen-width app-style window with no horizontal scrolling and reliable vertical scrolling.
-- Added browser app identity support, including app icons, favicon, manifest, and native-style save/download actions.
-
----
-
-## Features
-
-- **Region selector** — drag to select any area of the screen
-- **Full-screen capture** — capture the entire screen in one hotkey
-- **Clipboard image** — analyse an image you already copied
-- **Six built-in AI tasks** with dedicated hotkeys
-- **Custom tasks** loaded from `tasks.json`, editable from Settings, and shown in the tray menu
-- **Ready task pack** with 15 practical task templates across different domains
-- **Browser-rendered results** for consistent rich text, markdown, and RTL layout
-- **Save results** as `.md` / `.txt` and **save screenshots** as `.png`
-- **Analysis history** — last 20 results accessible from the tray menu
-- **Persistent progress popup** while capture/model processing is running
-- **Toast notifications** for completed clipboard copy actions
-- **Settings page** — choose models from a live dropdown, add an Ollama API token, configure translation, toggle thinking mode, and manage custom tasks
-- **About & Shortcuts** reference dialog
-- Runs entirely in the background as a **system-tray app** — no persistent window
-
----
-
-## Built-in Tasks
+## Built-In Tasks
 
 | Task | Hotkey | Output |
-|------|--------|--------|
+| --- | --- | --- |
 | Describe Screen | `Ctrl+Alt+S` | Markdown section cards |
 | Extract Text (OCR) | `Ctrl+Alt+T` | Plain text, auto-copied |
-| Translate to English | `Ctrl+Alt+X` | Plain text |
+| Translate | `Ctrl+Alt+X` | Plain text |
 | Explain / Deep-Dive | `Ctrl+Alt+E` | Markdown section cards |
 | Find Errors & Fixes | `Ctrl+Alt+D` | Markdown section cards |
 | Summarise Document | `Ctrl+Alt+U` | Markdown section cards |
 | Full Screen Capture | `Ctrl+Alt+F` | Markdown section cards |
 
----
+## Ready Task Pack
 
-## Ready Custom Task Pack
+The repository includes [tasks.json](tasks.json), a ready-to-use pack of 15
+custom tasks. These tasks appear in the tray menu and can be edited from
+Settings.
 
-The repository includes [tasks.json](tasks.json) with 15 ready custom tasks:
+| Domain | Task |
+| --- | --- |
+| Product and design | UI/UX Review |
+| Engineering | Code Review |
+| Security | Security & Privacy Scan |
+| Analytics | Data & Chart Insights |
+| Finance | Finance: Invoice/Receipt Extractor |
+| Legal | Legal: Clause Scanner |
+| Healthcare | Medical: Note Summarizer |
+| Research | Academic Paper Digest |
+| Operations | Meeting Notes: Action Items |
+| Support | Customer Support Reply |
+| Sales | Sales/CRM Brief |
+| Project management | Project Risk Scan |
+| Purchasing | Product Comparison |
+| Accessibility | Accessibility Audit |
+| Education | Language Learning Explainer |
 
-- UI/UX Review
-- Code Review
-- Security & Privacy Scan
-- Data & Chart Insights
-- Finance: Invoice/Receipt Extractor
-- Legal: Clause Scanner
-- Medical: Note Summarizer
-- Academic Paper Digest
-- Meeting Notes: Action Items
-- Customer Support Reply
-- Sales/CRM Brief
-- Project Risk Scan
-- Product Comparison
-- Accessibility Audit
-- Language Learning Explainer
-
-When running from source, the app reads `tasks.json` from the project root. When running the compiled exe, place `tasks.json` next to `ScreenAnalyser.exe`.
-
----
+When running from source, the app reads `tasks.json` from the project root. When
+running the compiled exe, place `tasks.json` next to `ScreenAnalyser.exe`.
 
 ## Requirements
 
-- Windows 10 / 11
-- [Ollama](https://ollama.com) installed and running (`ollama serve`)
-- A vision-capable model pulled, e.g.:
+- Windows 10 or Windows 11
+- Python 3.10+ when running from source
+- [Ollama](https://ollama.com) installed and running
+- At least one vision-capable Ollama model, for example:
 
 ```bash
 ollama pull qwen3-vl:4b
 ```
 
----
+Cloud-only Ollama models can be used by adding an Ollama API token in Settings.
 
 ## Quick Start
 
-### Option A — Run the pre-built exe
+### Run The Pre-Built App
 
-Download `ScreenAnalyser.exe` from [Releases](../../releases) and double-click it. Ollama must be running in the background.
+Download `ScreenAnalyser.exe` from [Releases](../../releases), place
+`tasks.json` next to it if you want the ready custom task pack, then run the exe.
+Ollama must be running in the background for local models.
 
-### Option B — Run from source
+### Run From Source
 
 ```bash
-# 1. Clone
 git clone git@github.com:alihayajneh/ScreenAnalyser.git
 cd ScreenAnalyser
 
-# 2. Create virtual environment
 python -m venv venv
 venv\Scripts\activate
 
-# 3. Install dependencies
 pip install -r requirements.txt
-
-# 4. Run
 python screen_analyser.pyw
 ```
 
-### Option C — Build the exe yourself
+### Build The Exe
 
 ```bash
-venv\Scripts\pyinstaller screen_analyser.spec
-# Output: dist\ScreenAnalyser.exe
+python -m PyInstaller screen_analyser.spec
 ```
 
----
+The compiled application is written to:
 
-## Project Structure
-
-```
-ScreenAnalyser/
-├── app/
-│   ├── __init__.py
-│   ├── about.py            # About & Shortcuts dialog
-│   ├── capture.py          # Screen/clipboard capture + Ollama worker
-│   ├── config.py           # Path helpers, persistent Settings
-│   ├── history.py          # In-memory analysis history store
-│   ├── main.py             # App entry point, queue dispatcher
-│   ├── markdown_renderer.py# Markdown → styled tkinter Text
-│   ├── result_window.py    # Spinner → results window
-│   ├── selector.py         # Fullscreen drag-to-select overlay
-│   ├── settings_dialog.py  # Model + thinking mode settings
-│   ├── state.py            # Shared queue and processing lock
-│   ├── tasks.py            # Task registry and built-in prompts
-│   ├── toast.py            # Auto-dismissing toast notification
-│   └── tray.py             # System-tray icon and submenus
-├── generate_icon.py        # Script to regenerate icon.ico
-├── icon.ico
-├── requirements.txt
-├── run.bat
-├── screen_analyser.pyw     # Launcher
-└── screen_analyser.spec    # PyInstaller build spec
+```text
+dist\ScreenAnalyser.exe
 ```
 
----
+## Settings
 
-## Adding a New Task
+Open Settings from the tray icon to configure:
 
-Use **Settings -> Custom tasks** to create or edit tasks. The app writes them to `tasks.json`:
+- Ollama API token for authenticated cloud models.
+- Active model, selected from the detected model dropdown.
+- Translation source and target languages.
+- Thinking mode for models that support reasoning-style output.
+- Custom tasks, including name, prompt, hotkey, output mode, and auto-copy.
+
+User settings are saved to `settings.json` next to the exe or project root.
+Custom tasks are saved to `tasks.json`.
+
+## Custom Tasks
+
+Custom tasks are plain JSON objects. You can create them from Settings or edit
+`tasks.json` directly.
 
 ```json
 {
@@ -179,36 +154,80 @@ Use **Settings -> Custom tasks** to create or edit tasks. The app writes them to
 }
 ```
 
-No code changes are needed. The task appears in the tray menu and its hotkey is registered automatically. Built-in tasks still live in `app/tasks.py`.
+Task behavior:
 
----
+- `hotkey`: optional global shortcut, such as `ctrl+alt+m`.
+- `auto_copy`: copies the result to the clipboard when analysis completes.
+- `raw_output`: shows plain text instead of markdown cards.
+- `rtl`: displays the result with right-to-left layout.
 
-## Settings
+Built-in tasks are defined in [app/tasks.py](app/tasks.py). Custom tasks do not
+require code changes.
 
-Right-click the tray icon → **Settings** to:
+## Project Structure
 
-- Select any Ollama model installed on your machine (with live refresh)
-- Choose available models from a dropdown list
-- Add an Ollama API token for authenticated cloud models
-- Configure translation source/target languages
-- Enable **thinking mode** for deeper step-by-step reasoning (qwen3 / deepseek-r1)
-- Create, edit, and delete custom tasks
+```text
+ScreenAnalyser/
+|-- app/
+|   |-- about.py             # About and shortcuts helpers
+|   |-- browser_preview.py   # Browser preview support
+|   |-- capture.py           # Screen/clipboard capture and Ollama worker
+|   |-- config.py            # Path helpers and persistent settings
+|   |-- history.py           # In-memory analysis history
+|   |-- main.py              # App controller, queue dispatcher, hotkeys
+|   |-- markdown_renderer.py # Legacy markdown renderer helpers
+|   |-- ollama_utils.py      # Local/cloud Ollama discovery and routing
+|   |-- result_window.py     # Result window facade
+|   |-- rtl.py               # RTL shaping and bidi helpers
+|   |-- selector.py          # Full-screen region selector
+|   |-- settings_dialog.py   # Legacy settings dialog helpers
+|   |-- state.py             # Shared queue and processing lock
+|   |-- tasks.py             # Built-in tasks and custom task loader
+|   |-- toast.py             # Toast and progress popup UI
+|   |-- tray.py              # System tray icon and menus
+|   `-- web_ui.py            # Browser-rendered app UI and API
+|-- generate_icon.py         # Icon generation helper
+|-- icon.ico                 # App icon
+|-- README.md
+|-- requirements.txt
+|-- run.bat
+|-- screen_analyser.pyw      # App launcher
+|-- screen_analyser.spec     # PyInstaller build spec
+|-- screenshot_1.png         # README screenshot
+`-- tasks.json               # Ready custom task pack
+```
 
-Settings are saved to `settings.json` next to the exe.
+## Troubleshooting
 
----
+### No Models Are Listed
+
+- Make sure Ollama is running.
+- Confirm models are installed with `ollama list`.
+- Pull a vision model with `ollama pull qwen3-vl:4b`.
+- If using cloud models, add your Ollama API token in Settings and refresh the
+  model list.
+
+### Capture Does Not Start
+
+- Check that another analysis is not already running.
+- Restart the app from the tray menu.
+- If global hotkeys are blocked by another program, use the tray menu actions.
+
+### RTL Text Looks Wrong
+
+- Use the browser-rendered result window, which applies browser text layout for
+  RTL languages.
+- For custom RTL tasks, enable the `rtl` flag in Settings.
 
 ## Dependencies
 
 | Package | Purpose |
-|---------|---------|
+| --- | --- |
 | `ollama` | Ollama Python client |
-| `Pillow` | Screen capture, image processing |
-| `pystray` | System-tray icon |
-| `keyboard` | Global hotkey hooks |
-| `pyinstaller` | Build standalone exe |
-
----
+| `Pillow` | Screen capture and image processing |
+| `pystray` | Windows system tray icon |
+| `keyboard` | Global hotkeys |
+| `pyinstaller` | Standalone exe build |
 
 ## License
 
