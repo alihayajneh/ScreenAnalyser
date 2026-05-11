@@ -19,7 +19,6 @@ from typing import Optional, Tuple
 
 import keyboard
 
-from .about            import show_about_dialog
 from .capture          import (
     run_analysis,
     run_analysis_clipboard,
@@ -27,13 +26,14 @@ from .capture          import (
 )
 from .config           import ICON_PATH, cfg
 from .history          import history
+from .ollama_utils     import resolve_model
 from .result_window    import AnalysisWindow, show_error_popup
 from .selector         import RegionSelector
-from .settings_dialog  import show_settings_dialog
 from .state            import processing_lock, ui_queue
 from .tasks            import BUILTIN_TASKS, RTL_LANGUAGES, Task, get as get_task, make_translate_prompt
 from .toast            import show_toast
 from .tray             import SystemTray
+from .web_ui           import show_about, show_settings, start_browser_ui, stop_browser_ui
 
 BBox = Tuple[int, int, int, int]
 
@@ -70,6 +70,7 @@ class App:
     # ── Setup ─────────────────────────────────────────────────────────────────
 
     def _setup_root(self) -> None:
+        start_browser_ui()
         root = tk.Tk()
         root.withdraw()
         root.title("Screen Analyser")
@@ -147,8 +148,7 @@ class App:
             self._on_result(content, img, task)
 
         elif msg_type == "error":
-            self._analysis_win.close()
-            show_error_popup(self._root, "Screen Analyser — Error", payload)  # type: ignore[arg-type]
+            self._analysis_win.show_error("Screen Analyser - Error", payload)  # type: ignore[arg-type]
 
         elif msg_type == "show_history":
             self._on_show_history(int(payload))                 # type: ignore[arg-type]
@@ -157,13 +157,14 @@ class App:
             history.clear()
 
         elif msg_type == "show_settings":
-            show_settings_dialog(self._root, cfg)
+            show_settings()
 
         elif msg_type == "show_about":
-            show_about_dialog(self._root)
+            show_about()
 
         elif msg_type == "quit":
             keyboard.unhook_all_hotkeys()
+            stop_browser_ui()
             self._root.destroy()
 
     # ── Result handling ───────────────────────────────────────────────────────
@@ -196,7 +197,7 @@ class App:
         if task.raw_output:
             self._analysis_win.show_raw_result(task.name, content, img, rtl=task.rtl)
         else:
-            self._analysis_win.show_results(task.name, content, img)
+            self._analysis_win.show_results(task.name, content, img, rtl=task.rtl)
 
     # ── Task preparation ──────────────────────────────────────────────────────
 
@@ -240,6 +241,7 @@ class App:
                 f"[History] {entry.task_name}  {entry.timestamp}",
                 entry.content,
                 entry.screenshot,
+                rtl=entry.rtl,
             )
 
     # ── Quick capture ─────────────────────────────────────────────────────────
@@ -249,12 +251,25 @@ class App:
             return
         processing_lock.set()
 
+        model, available_models = resolve_model(cfg.model, cfg.ollama_api_key)
+        if not available_models:
+            processing_lock.clear()
+            show_error_popup(
+                self._root,
+                "Screen Analyser — Error",
+                "**No Ollama models found**\n\n"
+                "Make sure Ollama is running, then pull at least one model before running analysis.\n\n"
+                "```\nollama list\nollama pull <model>\n```",
+            )
+            return
+
         if mode == "fullscreen":
             task = self._prepare_task(get_task(_FULLSCREEN_TASK_ID))
             run_analysis_fullscreen(
                 task     = task,
-                model    = cfg.model,
+                model    = model,
                 thinking = cfg.thinking,
+                api_key  = cfg.ollama_api_key,
                 q        = ui_queue,
                 lock     = processing_lock,
             )
@@ -262,8 +277,9 @@ class App:
             task = self._prepare_task(get_task(_CLIPBOARD_TASK_ID))
             run_analysis_clipboard(
                 task     = task,
-                model    = cfg.model,
+                model    = model,
                 thinking = cfg.thinking,
+                api_key  = cfg.ollama_api_key,
                 q        = ui_queue,
                 lock     = processing_lock,
             )
@@ -281,11 +297,23 @@ class App:
         if bbox is None:
             processing_lock.clear()
             return
+        model, available_models = resolve_model(cfg.model, cfg.ollama_api_key)
+        if not available_models:
+            processing_lock.clear()
+            show_error_popup(
+                self._root,
+                "Screen Analyser — Error",
+                "**No Ollama models found**\n\n"
+                "Make sure Ollama is running, then pull at least one model before running analysis.\n\n"
+                "```\nollama list\nollama pull <model>\n```",
+            )
+            return
         run_analysis(
             bbox     = bbox,
             task     = task,
-            model    = cfg.model,
+            model    = model,
             thinking = cfg.thinking,
+            api_key  = cfg.ollama_api_key,
             q        = ui_queue,
             lock     = processing_lock,
         )

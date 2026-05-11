@@ -1,5 +1,5 @@
 """
-app/config.py — App-wide constants, path helpers, and persistent Settings.
+app/config.py - App-wide constants, path helpers, and persistent Settings.
 
 Nothing in this module imports from the rest of the package.
 """
@@ -12,62 +12,35 @@ import threading
 from pathlib import Path
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Path helpers
-# ─────────────────────────────────────────────────────────────────────────────
-
 def resource_path(filename: str) -> Path:
-    """
-    Locate a bundled asset.
-    • Frozen (PyInstaller): files are extracted to sys._MEIPASS.
-    • Script: files live in the project root (parent of this package).
-    """
+    """Locate a bundled asset."""
     if hasattr(sys, "_MEIPASS"):
         return Path(sys._MEIPASS) / filename
     return Path(__file__).parent.parent / filename
 
 
 def writable_path(filename: str) -> Path:
-    """
-    Locate a writable file (e.g. settings.json).
-    Always placed next to the exe / project root, never inside _MEIPASS.
-    """
+    """Locate a writable file next to the exe or project root."""
     if hasattr(sys, "_MEIPASS"):
         return Path(sys.executable).parent / filename
     return Path(__file__).parent.parent / filename
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  App-wide constants
-# ─────────────────────────────────────────────────────────────────────────────
-
-ICON_PATH    = resource_path("icon.ico")
+ICON_PATH = resource_path("icon.ico")
 TRAY_TOOLTIP = "Screen Analyser"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Persistent settings
-# ─────────────────────────────────────────────────────────────────────────────
-
 _DEFAULTS: dict = {
-    "model":          "qwen3-vl:4b",
-    "thinking":       False,
+    "model": "qwen3-vl:4b",
+    "ollama_api_key": "",
+    "thinking": False,
     "translate_from": "Auto-detect",
-    "translate_to":   "English",
+    "translate_to": "English",
 }
 
 
 class Settings:
-    """
-    Thread-safe, JSON-backed user settings.
-
-    Reading/writing is safe from any thread.  The file is re-written on every
-    mutation so that the exe and the script variant always stay in sync.
-
-    To add a new setting:
-      1. Add it to ``_DEFAULTS`` above.
-      2. Add a @property / @setter pair below.
-    """
+    """Thread-safe, JSON-backed user settings."""
 
     def __init__(self) -> None:
         self._path = writable_path("settings.json")
@@ -89,8 +62,6 @@ class Settings:
         except Exception:
             pass
 
-    # ── model ─────────────────────────────────────────────────────────────────
-
     @property
     def model(self) -> str:
         with self._lock:
@@ -102,7 +73,16 @@ class Settings:
             self._d["model"] = value.strip()
             self._save()
 
-    # ── thinking ──────────────────────────────────────────────────────────────
+    @property
+    def ollama_api_key(self) -> str:
+        with self._lock:
+            return str(self._d.get("ollama_api_key", _DEFAULTS["ollama_api_key"]))
+
+    @ollama_api_key.setter
+    def ollama_api_key(self, value: str) -> None:
+        with self._lock:
+            self._d["ollama_api_key"] = value.strip()
+            self._save()
 
     @property
     def thinking(self) -> bool:
@@ -114,8 +94,6 @@ class Settings:
         with self._lock:
             self._d["thinking"] = bool(value)
             self._save()
-
-    # ── translation language pair ─────────────────────────────────────────────
 
     @property
     def translate_from(self) -> str:
@@ -140,5 +118,4 @@ class Settings:
             self._save()
 
 
-# Module-level singleton — import ``cfg`` wherever settings are needed.
 cfg = Settings()

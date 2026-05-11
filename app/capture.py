@@ -29,9 +29,11 @@ import re
 import threading
 from typing import Optional, Tuple
 
-import ollama
 from PIL import Image, ImageGrab
 
+import ollama
+
+from .ollama_utils import chat_with_ollama
 from .tasks import Task
 
 BBox = Tuple[int, int, int, int]
@@ -42,13 +44,14 @@ def run_analysis(
     task:     Task,
     model:    str,
     thinking: bool,
+    api_key:  str,
     q:        "_queue.Queue",
     lock:     threading.Event,
 ) -> None:
     """Spawn the analysis worker thread for a selected region."""
     threading.Thread(
         target  = _worker,
-        args    = (bbox, task, model, thinking, q, lock),
+        args    = (bbox, task, model, thinking, api_key, q, lock),
         daemon  = True,
         name    = "capture-worker",
     ).start()
@@ -58,13 +61,14 @@ def run_analysis_fullscreen(
     task:     Task,
     model:    str,
     thinking: bool,
+    api_key:  str,
     q:        "_queue.Queue",
     lock:     threading.Event,
 ) -> None:
     """Spawn the analysis worker thread for the entire screen (bbox=None)."""
     threading.Thread(
         target  = _worker,
-        args    = (None, task, model, thinking, q, lock),
+        args    = (None, task, model, thinking, api_key, q, lock),
         daemon  = True,
         name    = "capture-worker",
     ).start()
@@ -74,13 +78,14 @@ def run_analysis_clipboard(
     task:     Task,
     model:    str,
     thinking: bool,
+    api_key:  str,
     q:        "_queue.Queue",
     lock:     threading.Event,
 ) -> None:
     """Spawn the analysis worker thread using a clipboard image."""
     threading.Thread(
         target  = _clipboard_worker,
-        args    = (task, model, thinking, q, lock),
+        args    = (task, model, thinking, api_key, q, lock),
         daemon  = True,
         name    = "capture-worker",
     ).start()
@@ -91,6 +96,7 @@ def _run_inference(
     task:       Task,
     model:      str,
     thinking:   bool,
+    api_key:    str,
     q:          "_queue.Queue",
 ) -> str:
     """
@@ -103,8 +109,9 @@ def _run_inference(
     screenshot.save(buf, format="PNG")
     image_bytes = buf.getvalue()
 
-    response = ollama.chat(
+    response = chat_with_ollama(
         model    = model,
+        api_key  = api_key,
         messages = [{"role": "user", "content": task.prompt, "images": [image_bytes]}],
         think    = thinking,
     )
@@ -130,6 +137,7 @@ def _worker(
     task:     Task,
     model:    str,
     thinking: bool,
+    api_key:  str,
     q:        "_queue.Queue",
     lock:     threading.Event,
 ) -> None:
@@ -142,7 +150,7 @@ def _worker(
         screenshot: Image.Image = ImageGrab.grab(bbox=bbox)
 
         # ── 2. Ollama inference ──────────────────────────────────────────────
-        content = _run_inference(screenshot, task, model, thinking, q)
+        content = _run_inference(screenshot, task, model, thinking, api_key, q)
         q.put(("result", (content, screenshot, task)))
 
     except ollama.ResponseError as exc:
@@ -169,6 +177,7 @@ def _clipboard_worker(
     task:     Task,
     model:    str,
     thinking: bool,
+    api_key:  str,
     q:        "_queue.Queue",
     lock:     threading.Event,
 ) -> None:
@@ -189,7 +198,7 @@ def _clipboard_worker(
                 "with Print Screen or from a browser) and try again."))
             return
 
-        content = _run_inference(screenshot, task, model, thinking, q)
+        content = _run_inference(screenshot, task, model, thinking, api_key, q)
         q.put(("result", (content, screenshot, task)))
 
     except ollama.ResponseError as exc:
