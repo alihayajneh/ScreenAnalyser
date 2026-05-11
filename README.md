@@ -1,6 +1,21 @@
 # Screen Analyser
 
-A lightweight Windows desktop application that lets you capture any region of your screen and analyse it instantly with a local AI vision model running through [Ollama](https://ollama.com). Everything runs locally — no cloud, no API keys.
+A lightweight Windows desktop application that lets you capture any region of your screen and analyse it instantly with an AI vision model through [Ollama](https://ollama.com). It supports local Ollama models and optional authenticated Ollama cloud models.
+
+---
+
+## Version 0.2 - Major Fixes
+
+Version 0.2 is a major stability and usability update focused on the issues found while testing across different Windows devices:
+
+- Replaced the old Tkinter result/settings/about surfaces with a browser-rendered app UI for more consistent layout and text rendering.
+- Fixed RTL translation display for Arabic, Hebrew, Persian, Urdu, and other right-to-left outputs by relying on browser text layout instead of Tkinter text widgets.
+- Added robust Ollama model discovery with clear fallback behavior when the configured default model is not available.
+- Added Ollama API token support so authenticated cloud models can be used from Settings.
+- Fixed screenshot/capture flow regressions where capturing could silently do nothing.
+- Reworked progress feedback into a small persistent popup that stays visible until results or errors are ready.
+- Updated result windows to open as a fixed 70% screen-width app-style window with no horizontal scrolling and reliable vertical scrolling.
+- Added browser app identity support, including app icons, favicon, manifest, and native-style save/download actions.
 
 ---
 
@@ -10,11 +25,12 @@ A lightweight Windows desktop application that lets you capture any region of yo
 - **Full-screen capture** — capture the entire screen in one hotkey
 - **Clipboard image** — analyse an image you already copied
 - **Six built-in AI tasks** with dedicated hotkeys
-- **Markdown results** rendered as styled section cards with per-section copy buttons
-- **Save results** as `.md` / `.txt` and **save screenshots** as `.png` / `.jpg`
+- **Browser-rendered results** for consistent rich text, markdown, and RTL layout
+- **Save results** as `.md` / `.txt` and **save screenshots** as `.png`
 - **Analysis history** — last 20 results accessible from the tray menu
-- **Toast notifications** — silent clipboard copy for OCR results
-- **Settings dialog** — switch models and toggle thinking mode on the fly
+- **Persistent progress popup** while capture/model processing is running
+- **Toast notifications** for completed clipboard copy actions
+- **Settings page** — switch models, add an Ollama API token, refresh model lists, configure translation, and toggle thinking mode
 - **About & Shortcuts** reference dialog
 - Runs entirely in the background as a **system-tray app** — no persistent window
 
@@ -132,6 +148,8 @@ No changes needed anywhere else — the task appears in the tray menu and hotkey
 Right-click the tray icon → **Settings** to:
 
 - Select any Ollama model installed on your machine (with live refresh)
+- Add an Ollama API token for authenticated cloud models
+- Configure translation source/target languages
 - Enable **thinking mode** for deeper step-by-step reasoning (qwen3 / deepseek-r1)
 
 Settings are saved to `settings.json` next to the exe.
