@@ -2,6 +2,8 @@
 
 A lightweight Windows desktop application that lets you capture any region of your screen and analyse it instantly with an AI vision model through [Ollama](https://ollama.com). It supports local Ollama models and optional authenticated Ollama cloud models.
 
+![Screen Analyser app screenshot](screenshot_1.png)
+
 ---
 
 ## Latest Updates
